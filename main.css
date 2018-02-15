@@ -1,0 +1,37 @@
+body {
+	font-family: "Trebuchet MS", Helvetica, sans-serif;
+}
+
+#BBCTable table {
+    border-collapse: collapse;
+	margin-left: 5%;
+	margin-right: 5%;
+    width: 90%;
+}
+
+#BBCTable td, #BBCTable th {
+    border: 1px solid #ddd;
+	font-family: "Consolas", Helvetica, sans-serif;
+    padding: 8px;
+	text-align: center;
+}
+
+#BBCTable th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: center;
+    background-color: #708090;
+    color: white;
+	width: 100px;
+}
+
+#BBCTable tr:nth-child(even){background-color: #f2f2f2;}
+
+#BBCTable tr:hover {
+	background-color: #ddd;
+}
+
+#BBCTable th:hover {
+	cursor: pointer;
+	background-color: #374048;
+}

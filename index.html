@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="content-language" content="en" />
+		<meta http-equiv="Content-Type" content="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+		<link href="http://localhost:8000/main.css" media="all" rel="stylesheet" type="text/css" />
+		
+	</head>
+	<body>
+		<div id="BBCTable"></div>
+		<script src="http://localhost:8000/jquery-2.1.1.js"></script>
+		<script>
+			//Cache of values from dictionary
+			var $BBCChannels = { "OriginalChannels": null, "Channels": null, "Keys": [], "Size": 0, "Headers": "" };
+			
+			$.getJSON('http://localhost:8000/data.json', function (data) {
+			console.log(data);
+				
+				//Variables
+				var html = "<table>";
+				var htmlHeader = "<tr>";
+				var htmlRow = "";
+				var keys = [];
+				var size = 0;
+				
+				//Build dictionary of channels to store number of broadcasts for later use
+				var dict = { "Date": [], "BBC One": [], "BBC Two": [], "BBC Three": [], "BBC News 24": [], "CBBC": [], "Cbeebies": [] };
+				
+				for (var channel in dict) {
+					//Dictionary keys match the keys in the JSON once converted to lowercase without whitespace
+					var cKey = channel.replace(/ /g, '').toLowerCase();
+					keys.push(channel);
+					
+					htmlHeader += "<th id=" + cKey + " onclick=SortTable(this.id); >" + channel + "</th>"
+					
+					for(var obj in data) {
+						if(channel == "Date") {
+							date = FormatDate(new Date(obj));
+							dict[channel].push(date);
+						}
+						else{
+							dict[channel].push(data[obj][cKey]);
+						}
+						
+						//Get dictionary size for later
+						size = dict[channel].length;
+					}
+				}
+				
+				//Cache dictionary values for later use
+				$BBCChannels.Channels = dict;
+				$BBCChannels.OriginalChannels = dict;
+				$BBCChannels.Headers = htmlHeader;
+				$BBCChannels.Size = size;
+				$BBCChannels.Keys = keys;
+				
+				CreateTable();
+			});
+			
+			
+			//Methods
+			
+			//Create HTML table and place inside "BBCTable" div
+			function CreateTable() {
+				var html = "<table>";
+				var htmlRows = ""
+
+				for (var i = 0; i < $BBCChannels.Size ; i++) {
+					htmlRows += "<tr>"
+					for (var channel in $BBCChannels.Channels) {
+						htmlRows += "<td>" + $BBCChannels.Channels[channel][i] + "</td>"
+					}
+					htmlRows += "</tr>"
+				}
+
+				html += $BBCChannels.Headers + htmlRows + "</table>"
+				$('#BBCTable').html(html)
+			}
+			
+			
+			//Formats date object to string "Month YYYY"
+			function FormatDate(date) {
+			
+				var month = "";
+				var year = 0;
+				
+				switch (date.getMonth()) {
+					case 0:
+					month = "January";
+					break;
+					
+					case 1:
+					month = "February";
+					break;
+					
+					case 2:
+					month = "March";
+					break;
+					
+					case 3:
+					month = "April";
+					break;
+					
+					case 4:
+					month = "May";
+					break;
+					
+					case 5:
+					month = "June";
+					break;
+					
+					case 6:
+					month = "July";
+					break;
+					
+					case 7:
+					month = "August";
+					break;
+					
+					case 8:
+					month = "September";
+					break;
+					
+					case 9:
+					month = "October";
+					break;
+					
+					case 10:
+					month = "November";
+					break;
+					
+					case 11:
+					month = "December";
+					break;
+				}
+				
+				year = date.getFullYear();
+				
+				return (month + " " + year);
+			}
+			
+			/*Sorts table into descending order, if already sorted, ascending order
+			 /Sorting CBBC results in values becoming "undefined", 
+			 /I was unable to get the method to sort when duplicate values are present in the table.
+			 /For example, both September and March had 914 CBBC broadcasts.
+			*/
+			function SortTable(id) {
+				var tmpDict = Object.assign({}, $BBCChannels.Channels);
+
+				var oldArray = []
+				var newArray = []
+				var key = ""
+
+				//Grab the old array values for us to use
+				for (var i = 0; i < $BBCChannels.Keys.length; i++) {
+					if ($BBCChannels.Keys[i].replace(/ /g, '').toLowerCase() === id) {
+						oldArray = $BBCChannels.Channels[$BBCChannels.Keys[i]]
+						key = $BBCChannels.Keys[i]
+					}
+				}
+
+				//clone the old array
+				var newArray = Object.assign([], oldArray);
+
+				//Date has a unique sort
+				if (key === "Date")
+					newArray.sort(function (a, b) {
+						var DateA = new Date(a.replace(" ", ", "))
+						var DateB = new Date(b.replace(" ", ", "))
+						return DateA < DateB ? -1 : DateA > DateB ? 1 : 0;
+					});
+				else
+					newArray.sort(function (a, b) { return b - a });
+
+				//If the column is already sorted reverse the order
+				if (alreadySorted(oldArray,newArray))
+				{
+					newArray.reverse();
+				}
+
+				for (var channel in tmpDict) {
+					var TMP = [$BBCChannels.Size];
+					for (var i = 0; i < tmpDict[channel].length; i++) {
+						//TODO: Duplicates are not handled well at the moment
+						if (channel != key) {
+							TMP[newArray.indexOf(oldArray[i])] = tmpDict[channel][newArray.indexOf(newArray[i])]
+						}
+						else
+						{
+							TMP = newArray;
+						}
+					}
+					//Update our channels
+					$BBCChannels.Channels[channel] = TMP;
+				}
+
+				//Recreate the table
+				CreateTable()
+			}
+			
+			//Checks to see if column is already sorted
+			function alreadySorted(coll1, coll2)
+			{
+				for(var i = 0; i < coll1.length; i ++)
+				{
+					if (coll1[i] !== coll2[i])
+						return false;
+				}
+
+				return true;
+			}
+			
+			//Resets cached channels to original state
+			function ResetChannels()
+			{
+				$BBCChannels.Channels = $BBCChannels.OriginalChannels;
+				CreateTable();
+			}
+		</script>
+	</body>
+</html>
